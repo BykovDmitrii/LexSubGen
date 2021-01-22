@@ -26,7 +26,7 @@ class XLMRProbEstimator(EmbSimProbEstimator):
         use_attention_mask: bool = False,
         verbose: bool = False,
         aggr_stratagy: str = "mul_probs_with_coefs",
-        num_masks: int = 3,
+        num_masks: int = 2,
         beam_search: bool = False,
         beam_size: int = 3,
         max_num_mask: int = 5,
@@ -326,8 +326,9 @@ class XLMRProbEstimator(EmbSimProbEstimator):
             input_filled = torch.stack(t_l) 
             pred_probs, pred_tokens = self.fill_masks_continuation_with_beam_search(input_filled, targets_ids_for_tokens[1:])
             for idx, pred_prob, pred_token in zip(ids_for_tokens, pred_probs, pred_tokens):
-                if len(self.get_subs_from_token_list([int(pred_token[i]) for i in targets_ids_for_tokens]).split()) == 1:
-                    result_subst.append([int(pred_token[i]) for i in targets_ids_for_tokens])
+                substs_as_str = self.get_subs_from_token_list([int(pred_token[i]) for i in targets_ids_for_tokens])
+                if len(substs_as_str.split()) == 1:
+                    result_subst.append(substs_as_str)
                     probs.append(pred_prob * probs_for_tokens[idx])
         return probs, result_subst
 
@@ -364,7 +365,7 @@ class XLMRProbEstimator(EmbSimProbEstimator):
                 result_subst = result_subst + result_subst_fixed_num_masks
         elif self.aggr_stratagy == "single":
             probs, result_subst = self.fill_masks_cashed(tokens_lists, target_ids)
-        subs_to_id = {self.get_subs_from_token_list(subs): id for id, subs in enumerate(result_subst)}
+        subs_to_id = {subs: id for id, subs in enumerate(result_subst)}
         return torch.Tensor(probs).reshape(1, -1), subs_to_id
 
     def get_log_probs(
